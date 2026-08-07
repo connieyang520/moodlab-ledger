@@ -138,8 +138,15 @@
     </div>
 
     <div class="field-group" id="commissionBaseGroup" hidden>
-      <label class="field-label" for="commissionPartnerInput">合作對象名稱</label>
-      <input type="text" id="commissionPartnerInput" class="field-input" placeholder="例如：美睫師、新老師">
+      <label class="field-label" for="commissionPartnerSelect">合作對象</label>
+      <select id="commissionPartnerSelect" class="field-input">
+        <option value="美容師">美容師</option>
+        <option value="美甲師">美甲師</option>
+        <option value="整骨師">整骨師</option>
+        <option value="老師">老師</option>
+        <option value="__custom__">其他（自行輸入）</option>
+      </select>
+      <input type="text" id="commissionPartnerInput" class="field-input" placeholder="輸入對象名稱" hidden>
       <div class="field-row">
         <div class="field-group half">
           <label class="field-label" for="commissionBaseInput">客人消費金額</label>

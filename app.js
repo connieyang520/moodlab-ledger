@@ -248,6 +248,7 @@
   var quickPickLabel = document.getElementById('quickPickLabel');
   var quickPickSelect = document.getElementById('quickPickSelect');
   var commissionBaseGroup = document.getElementById('commissionBaseGroup');
+  var commissionPartnerSelect = document.getElementById('commissionPartnerSelect');
   var commissionPartnerInput = document.getElementById('commissionPartnerInput');
   var commissionBaseInput = document.getElementById('commissionBaseInput');
   var commissionRateInput = document.getElementById('commissionRateInput');
@@ -546,6 +547,8 @@
       quickPickGroup.hidden = true;
       quickPickSelect.innerHTML = '';
       commissionBaseGroup.hidden = false;
+      commissionPartnerSelect.value = '美容師';
+      commissionPartnerInput.hidden = true;
       modalAccount = 'company';
       accountToggleBtns.forEach(function (b) {
         var active = b.dataset.account === 'company';
@@ -600,15 +603,31 @@
     if (item) applyQuickPickItem(item);
   });
 
+  function getCommissionPartnerName() {
+    if (commissionPartnerSelect.value === '__custom__') {
+      return commissionPartnerInput.value.trim();
+    }
+    return commissionPartnerSelect.value;
+  }
+
   function updateCommissionCalc() {
     var base = parseFloat(commissionBaseInput.value) || 0;
     var rateRaw = parseFloat(commissionRateInput.value);
     var rate = isNaN(rateRaw) ? 30 : rateRaw;
     var computed = Math.round(base * rate / 100);
     amountInput.value = computed || '';
-    var partner = commissionPartnerInput.value.trim();
+    var partner = getCommissionPartnerName();
     noteInput.value = (partner ? partner + '｜' : '') + '抽成分潤（客人消費$' + base.toLocaleString() + ' × ' + rate + '%）';
   }
+
+  commissionPartnerSelect.addEventListener('change', function () {
+    commissionPartnerInput.hidden = commissionPartnerSelect.value !== '__custom__';
+    if (!commissionPartnerInput.hidden) {
+      commissionPartnerInput.value = '';
+      commissionPartnerInput.focus();
+    }
+    updateCommissionCalc();
+  });
   commissionPartnerInput.addEventListener('input', updateCommissionCalc);
   commissionBaseInput.addEventListener('input', updateCommissionCalc);
   commissionRateInput.addEventListener('input', updateCommissionCalc);
@@ -694,6 +713,8 @@
     amountInput.value = tx ? tx.amount : '';
     dateInput.value = tx ? tx.date : todayStr();
     noteInput.value = tx ? tx.note || '' : '';
+    commissionPartnerSelect.value = '美容師';
+    commissionPartnerInput.hidden = true;
     commissionPartnerInput.value = '';
     commissionBaseInput.value = '';
     commissionRateInput.value = '';
