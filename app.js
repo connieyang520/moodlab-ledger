@@ -109,10 +109,19 @@
     {
       label: '固定支出',
       items: [
-        { name: '店租', price: 38000, account: 'company' },
+        { name: '店租（單期，一個月繳兩次）', price: 19000, account: 'company' },
         { name: '店面管理費', price: 2080, account: 'company' },
         { name: '家裡房租', price: 24000, account: 'personal' },
-        { name: '家裡管理費', price: 17000, account: 'personal' }
+        { name: '家裡管理費', price: 1706, account: 'personal' }
+      ]
+    },
+    {
+      label: '浮動支出（金額請自行輸入）',
+      items: [
+        { name: '家裡水電費', account: 'personal' },
+        { name: '家裡瓦斯費', account: 'personal' },
+        { name: '店裡水電費', account: 'company' },
+        { name: '店裡瓦斯費', account: 'company' }
       ]
     }
   ];
@@ -610,7 +619,7 @@
   }
 
   function applyQuickPickItem(item) {
-    amountInput.value = item.price;
+    amountInput.value = item.price !== undefined ? item.price : '';
     noteInput.value = item.name;
     var acct = item.account || 'company';
     modalAccount = acct;
