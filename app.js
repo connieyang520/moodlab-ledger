@@ -369,9 +369,34 @@
       group.className = 'tx-day-group';
 
       var d = new Date(dateStr + 'T00:00:00');
+      var dayIncome = 0, dayExpense = 0;
+      byDate[dateStr].forEach(function (t) {
+        if (t.type === 'income') dayIncome += t.amount;
+        else if (t.type === 'expense') dayExpense += t.amount;
+      });
+
       var header = document.createElement('div');
       header.className = 'tx-day-header';
-      header.textContent = (d.getMonth() + 1) + '月' + d.getDate() + '日 ' + WEEKDAYS[d.getDay()];
+
+      var dateLabel = document.createElement('span');
+      dateLabel.textContent = (d.getMonth() + 1) + '月' + d.getDate() + '日 ' + WEEKDAYS[d.getDay()];
+      header.appendChild(dateLabel);
+
+      var totals = document.createElement('span');
+      totals.className = 'tx-day-totals';
+      if (dayIncome > 0) {
+        var incomeEl = document.createElement('span');
+        incomeEl.className = 'day-income';
+        incomeEl.textContent = '收入 +' + formatMoney(dayIncome);
+        totals.appendChild(incomeEl);
+      }
+      if (dayExpense > 0) {
+        var expenseEl = document.createElement('span');
+        expenseEl.className = 'day-expense';
+        expenseEl.textContent = '支出 -' + formatMoney(dayExpense);
+        totals.appendChild(expenseEl);
+      }
+      header.appendChild(totals);
       group.appendChild(header);
 
       byDate[dateStr].forEach(function (t) {
