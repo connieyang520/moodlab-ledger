@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<title>記帳本</title>
+<meta name="description" content="簡單好用的手機記帳工具">
+<meta name="theme-color" content="#704535">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="記帳本">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="style.css?v=3">
+</head>
+<body>
+
+<div class="app">
+
+  <!-- Header -->
+  <header class="header">
+    <button class="month-nav" id="prevMonth" aria-label="上個月">‹</button>
+    <div class="month-label" id="monthLabel">2026年8月</div>
+    <button class="month-nav" id="nextMonth" aria-label="下個月">›</button>
+  </header>
+
+  <!-- Account filter -->
+  <div class="account-filter" id="accountFilter" role="tablist">
+    <button class="account-filter-btn active" data-account="all" role="tab" aria-selected="true">全部</button>
+    <button class="account-filter-btn" data-account="personal" role="tab" aria-selected="false">個人帳</button>
+    <button class="account-filter-btn" data-account="company" role="tab" aria-selected="false">公司帳</button>
+  </div>
+
+  <!-- Summary card -->
+  <section class="summary-card">
+    <div class="summary-row">
+      <div class="summary-item">
+        <span class="summary-label">收入</span>
+        <span class="summary-value income" id="sumIncome">$0</span>
+      </div>
+      <div class="summary-item">
+        <span class="summary-label">支出</span>
+        <span class="summary-value expense" id="sumExpense">$0</span>
+      </div>
+      <div class="summary-item">
+        <span class="summary-label">結餘</span>
+        <span class="summary-value balance" id="sumBalance">$0</span>
+      </div>
+    </div>
+    <div class="summary-transfer-row" id="summaryTransferRow" hidden>
+      <span class="summary-transfer-label">本月轉帳（不計入收支）</span>
+      <span class="summary-transfer-value" id="summaryTransferValue">$0</span>
+    </div>
+  </section>
+
+  <!-- Main content -->
+  <main class="content">
+
+    <!-- List view -->
+    <section id="listView" class="view">
+      <div id="txList" class="tx-list"></div>
+      <p id="emptyState" class="empty-state" hidden>這個月還沒有任何記錄<br>點右下角「+」開始記帳</p>
+    </section>
+
+    <!-- Stats view -->
+    <section id="statsView" class="view" hidden>
+      <div class="stats-toggle" role="tablist">
+        <button class="stats-toggle-btn active" data-stype="expense" role="tab" aria-selected="true">支出</button>
+        <button class="stats-toggle-btn" data-stype="income" role="tab" aria-selected="false">收入</button>
+      </div>
+      <div class="donut-wrap">
+        <div class="donut" id="donutChart" role="img" aria-label="分類佔比圓環圖"></div>
+        <div class="donut-center">
+          <span class="donut-center-label" id="donutCenterLabel">支出總額</span>
+          <span class="donut-center-value" id="donutCenterValue">$0</span>
+        </div>
+      </div>
+      <ul class="legend" id="legendList"></ul>
+      <p id="statsEmpty" class="empty-state" hidden>這個月還沒有資料可以統計</p>
+      <button class="report-open-btn" id="openReportBtn">📑 查看完整報表</button>
+    </section>
+
+  </main>
+
+  <!-- FAB -->
+  <button class="fab" id="fabAdd" aria-label="新增記帳">+</button>
+
+  <!-- Bottom tab bar -->
+  <nav class="tabbar">
+    <button class="tab-btn active" id="tabList" data-tab="listView">
+      <span class="tab-icon">📒</span><span>記帳</span>
+    </button>
+    <button class="tab-btn" id="tabStats" data-tab="statsView">
+      <span class="tab-icon">📊</span><span>統計</span>
+    </button>
+  </nav>
+
+</div>
+
+<!-- Add/Edit modal -->
+<div class="modal-backdrop" id="modalBackdrop" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-header">
+      <button class="modal-close" id="modalClose" aria-label="關閉">✕</button>
+      <h2 class="modal-title" id="modalTitle">新增記帳</h2>
+      <button class="modal-delete" id="modalDelete" hidden aria-label="刪除">刪除</button>
+    </div>
+
+    <div class="type-toggle" role="tablist">
+      <button class="type-toggle-btn expense active" data-type="expense" role="tab" aria-selected="true">支出</button>
+      <button class="type-toggle-btn income" data-type="income" role="tab" aria-selected="false">收入</button>
+      <button class="type-toggle-btn transfer" data-type="transfer" role="tab" aria-selected="false">轉帳</button>
+    </div>
+
+    <div class="account-toggle" id="accountToggleGroup" role="tablist">
+      <button class="account-toggle-btn active" data-account="personal" role="tab" aria-selected="true">個人帳</button>
+      <button class="account-toggle-btn" data-account="company" role="tab" aria-selected="false">公司帳</button>
+    </div>
+
+    <div class="account-toggle" id="transferDirectionGroup" role="tablist" hidden>
+      <button class="account-toggle-btn active" data-direction="company-personal" role="tab" aria-selected="true">公司帳→個人帳</button>
+      <button class="account-toggle-btn" data-direction="personal-company" role="tab" aria-selected="false">個人帳→公司帳</button>
+    </div>
+
+    <div class="amount-row">
+      <span class="amount-currency">$</span>
+      <input type="number" inputmode="decimal" id="amountInput" class="amount-input" placeholder="0" min="0" step="0.01">
+    </div>
+
+    <div class="field-group" id="categoryFieldGroup">
+      <label class="field-label">分類</label>
+      <div class="category-grid" id="categoryGrid"></div>
+    </div>
+
+    <div class="field-group" id="quickPickGroup" hidden>
+      <label class="field-label" id="quickPickLabel" for="quickPickSelect">快選項目</label>
+      <select id="quickPickSelect" class="field-input"></select>
+    </div>
+
+    <div class="field-group" id="commissionBaseGroup" hidden>
+      <label class="field-label" for="commissionPartnerInput">合作對象名稱</label>
+      <input type="text" id="commissionPartnerInput" class="field-input" placeholder="例如：美睫師、新老師">
+      <div class="field-row">
+        <div class="field-group half">
+          <label class="field-label" for="commissionBaseInput">客人消費金額</label>
+          <input type="number" inputmode="decimal" id="commissionBaseInput" class="field-input" placeholder="0" min="0" step="1">
+        </div>
+        <div class="field-group half">
+          <label class="field-label" for="commissionRateInput">我方比例 %</label>
+          <input type="number" inputmode="decimal" id="commissionRateInput" class="field-input" placeholder="30" min="0" max="100" step="1">
+        </div>
+      </div>
+    </div>
+
+    <div class="field-group">
+      <label class="field-label" for="dateInput">日期</label>
+      <input type="date" id="dateInput" class="field-input">
+    </div>
+    <div class="field-group">
+      <label class="field-label" for="noteInput">備註</label>
+      <input type="text" id="noteInput" class="field-input" placeholder="選填">
+    </div>
+
+    <button class="save-btn" id="saveBtn">儲存</button>
+  </div>
+</div>
+
+<!-- Report sheet -->
+<div class="modal-backdrop" id="reportBackdrop" hidden>
+  <div class="modal report-modal" role="dialog" aria-modal="true" aria-labelledby="reportTitle">
+    <div class="modal-header">
+      <button class="modal-close" id="reportClose" aria-label="關閉">✕</button>
+      <h2 class="modal-title" id="reportTitle">報表</h2>
+      <span class="modal-header-spacer"></span>
+    </div>
+
+    <section class="report-section">
+      <h3 class="report-section-title">帳戶餘額（累計至今）</h3>
+      <div class="report-balance-grid">
+        <div class="report-balance-item">
+          <span class="report-balance-label">個人帳</span>
+          <span class="report-balance-value" id="balancePersonal">$0</span>
+        </div>
+        <div class="report-balance-item">
+          <span class="report-balance-label">公司帳</span>
+          <span class="report-balance-value" id="balanceCompany">$0</span>
+        </div>
+        <div class="report-balance-item total">
+          <span class="report-balance-label">總計</span>
+          <span class="report-balance-value" id="balanceTotal">$0</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="report-section">
+      <h3 class="report-section-title">資料備份</h3>
+      <p class="backup-hint">資料只存在這支手機的瀏覽器裡，建議定期匯出備份，換手機或清資料前才不會全部消失。</p>
+      <div class="backup-buttons">
+        <button class="save-btn" id="exportBackupBtn">📤 匯出備份</button>
+        <button class="save-btn backup-btn-secondary" id="importBackupBtn">📥 匯入備份</button>
+      </div>
+      <input type="file" id="importFileInput" accept="application/json" hidden>
+    </section>
+
+    <section class="report-section">
+      <h3 class="report-section-title">進階搜尋</h3>
+      <input type="text" id="searchKeyword" class="field-input" placeholder="關鍵字（分類、備註）">
+      <div class="field-row">
+        <input type="number" id="searchAmountMin" class="field-input" placeholder="最低金額">
+        <input type="number" id="searchAmountMax" class="field-input" placeholder="最高金額">
+      </div>
+      <div class="field-row">
+        <input type="date" id="searchDateFrom" class="field-input">
+        <input type="date" id="searchDateTo" class="field-input">
+      </div>
+      <button class="save-btn report-search-btn" id="searchBtn">搜尋</button>
+      <p class="empty-state" id="searchEmpty" hidden>沒有符合的記錄</p>
+      <div id="searchResults" class="tx-list"></div>
+    </section>
+
+    <section class="report-section">
+      <h3 class="report-section-title">各月統計</h3>
+      <div id="monthlyTrendList" class="report-trend-list"></div>
+    </section>
+
+    <section class="report-section">
+      <h3 class="report-section-title">項目排名</h3>
+      <div class="stats-toggle" id="rankScopeToggle" role="tablist">
+        <button class="stats-toggle-btn active" data-scope="all" role="tab" aria-selected="true">累計至今</button>
+        <button class="stats-toggle-btn" data-scope="month" role="tab" aria-selected="false">指定月份</button>
+        <button class="stats-toggle-btn" data-scope="range" role="tab" aria-selected="false">指定範圍</button>
+      </div>
+      <input type="month" id="rankMonthInput" class="field-input rank-scope-input" hidden>
+      <div class="field-row rank-scope-input" id="rankRangeInputs" hidden>
+        <input type="date" id="rankRangeFrom" class="field-input">
+        <input type="date" id="rankRangeTo" class="field-input">
+      </div>
+      <div class="stats-toggle" id="rankTypeToggle" role="tablist">
+        <button class="stats-toggle-btn active" data-rtype="expense" role="tab" aria-selected="true">支出</button>
+        <button class="stats-toggle-btn" data-rtype="income" role="tab" aria-selected="false">收入</button>
+      </div>
+      <select id="rankCategorySelect" class="field-input rank-category-select"></select>
+      <ol class="legend" id="rankList"></ol>
+    </section>
+  </div>
+</div>
+
+<script src="seed-data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
