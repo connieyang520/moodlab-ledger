@@ -60,6 +60,8 @@ input {
   background: var(--surface-1);
 }
 
+[hidden] { display: none !important; }
+
 .app {
   max-width: 480px;
   margin: 0 auto;
