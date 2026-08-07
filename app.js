@@ -524,6 +524,14 @@
         '<span class="chip-label">' + cat.name + '</span>';
       chip.addEventListener('click', function () {
         selectedCategoryId = cat.id;
+        if (modalType === 'income') {
+          modalAccount = 'company';
+          accountToggleBtns.forEach(function (b) {
+            var active = b.dataset.account === 'company';
+            b.classList.toggle('active', active);
+            b.setAttribute('aria-selected', active ? 'true' : 'false');
+          });
+        }
         renderCategoryGrid();
         updateQuickPick();
       });
