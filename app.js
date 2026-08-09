@@ -133,6 +133,15 @@
         { name: '會計費', price: 2500, account: 'company' },
         { name: '網路行銷廣告', price: 5284, account: 'company' }
       ]
+    },
+    {
+      label: '材料採購（金額請自行輸入）',
+      items: [
+        { name: '紋繡材料', account: 'company' },
+        { name: '睫毛材料', account: 'company' },
+        { name: '野生眉材料', account: 'company' },
+        { name: '店內雜費', account: 'company' }
+      ]
     }
   ];
 
