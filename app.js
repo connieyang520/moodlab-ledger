@@ -48,7 +48,7 @@
       items: [
         { name: '睫毛管理', price: 1680 },
         { name: '野生眉雕塑', price: 1980 },
-        { name: '睫毛管理+野生眉雕塑', price: 3500 },
+        { name: '野生眉雕塑＋睫毛管理', price: 3500 },
         { name: '肌膚管理', price: 1680 }
       ]
     },
