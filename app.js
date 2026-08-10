@@ -145,11 +145,21 @@
     }
   ];
 
+  var MEDICAL_EXPENSE_GROUPS = [
+    {
+      label: '固定支出',
+      items: [
+        { name: '健保費（雙月繳）', price: 4342, account: 'personal' }
+      ]
+    }
+  ];
+
   var QUICKPICKS = {
     service: { label: '服務項目（選填，自動帶入品名與金額）', groups: SERVICE_ITEM_GROUPS },
     sublease: { label: '分租項目（選填，自動帶入品名與金額）', groups: SUBLEASE_GROUPS },
     home: { label: '固定支出（選填，自動帶入品名、金額與帳戶）', groups: HOME_EXPENSE_GROUPS },
-    other_expense: { label: '固定支出（選填，自動帶入品名、金額與帳戶）', groups: OTHER_EXPENSE_GROUPS }
+    other_expense: { label: '固定支出（選填，自動帶入品名、金額與帳戶）', groups: OTHER_EXPENSE_GROUPS },
+    medical: { label: '固定支出（選填，自動帶入品名、金額與帳戶）', groups: MEDICAL_EXPENSE_GROUPS }
   };
 
   function buildSeedTransactions() {
