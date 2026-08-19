@@ -897,8 +897,8 @@
       if (!txMatchesAccountFilter(t)) return;
       var d = new Date(t.date + 'T00:00:00');
       var key = d.getFullYear() + '-' + pad(d.getMonth() + 1);
-      if (!byMonth[key]) byMonth[key] = { income: 0, expense: 0, transfer: 0, year: d.getFullYear(), month: d.getMonth() + 1 };
-      if (t.type === 'income') byMonth[key].income += t.amount;
+      if (!byMonth[key]) byMonth[key] = { income: 0, expense: 0, transfer: 0, incomeCount: 0, year: d.getFullYear(), month: d.getMonth() + 1 };
+      if (t.type === 'income') { byMonth[key].income += t.amount; byMonth[key].incomeCount++; }
       else if (t.type === 'expense') byMonth[key].expense += t.amount;
       else if (t.type === 'transfer' && accountFilter !== 'all') {
         if (t.toAccount === accountFilter) byMonth[key].transfer += t.amount;
@@ -923,6 +923,9 @@
           '<span class="expense">-' + formatMoney(m.expense) + '</span>' +
           '<span class="balance">' + formatMoney(m.income - m.expense) + '</span>' +
         '</span>';
+      if (m.incomeCount > 0) {
+        html += '<span class="report-trend-transfer">收入交易筆數（來客次數估計）' + m.incomeCount + '筆</span>';
+      }
       if (accountFilter !== 'all' && m.transfer !== 0) {
         html += '<span class="report-trend-transfer">轉帳 ' + (m.transfer >= 0 ? '+' : '') + formatMoney(m.transfer) + '</span>';
       }
@@ -1150,8 +1153,8 @@
       if (!txMatchesAccountFilter(t)) return;
       var d = new Date(t.date + 'T00:00:00');
       var key = d.getFullYear() + '-' + pad(d.getMonth() + 1);
-      if (!byMonth[key]) byMonth[key] = { income: 0, expense: 0, transfer: 0 };
-      if (t.type === 'income') byMonth[key].income += t.amount;
+      if (!byMonth[key]) byMonth[key] = { income: 0, expense: 0, transfer: 0, incomeCount: 0 };
+      if (t.type === 'income') { byMonth[key].income += t.amount; byMonth[key].incomeCount++; }
       else if (t.type === 'expense') byMonth[key].expense += t.amount;
       else if (t.type === 'transfer' && accountFilter !== 'all') {
         if (t.toAccount === accountFilter) byMonth[key].transfer += t.amount;
@@ -1165,7 +1168,7 @@
     } else {
       monthKeys.forEach(function (key) {
         var m = byMonth[key];
-        var row = key + '　收入 +' + formatMoney(m.income) + '　支出 -' + formatMoney(m.expense) + '　結餘 ' + formatMoney(m.income - m.expense);
+        var row = key + '　收入 +' + formatMoney(m.income) + '　支出 -' + formatMoney(m.expense) + '　結餘 ' + formatMoney(m.income - m.expense) + '　收入交易筆數(來客次數估計) ' + m.incomeCount + '筆';
         if (accountFilter !== 'all' && m.transfer !== 0) {
           row += '　轉帳 ' + (m.transfer >= 0 ? '+' : '') + formatMoney(m.transfer);
         }
