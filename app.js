@@ -1005,17 +1005,19 @@
     }
 
     var totals = {};
+    var counts = {};
     var grand = 0;
     transactions.forEach(function (t) {
       if (t.type !== rankType) return;
       if (!txMatchesAccountFilter(t)) return;
       if (!rankMatchesScope(t)) return;
       totals[t.categoryId] = (totals[t.categoryId] || 0) + t.amount;
+      counts[t.categoryId] = (counts[t.categoryId] || 0) + 1;
       grand += t.amount;
     });
     var cats = categoriesFor(rankType);
     var rows = cats
-      .map(function (c) { return { cat: c, amount: totals[c.id] || 0 }; })
+      .map(function (c) { return { cat: c, amount: totals[c.id] || 0, count: counts[c.id] || 0 }; })
       .filter(function (r) { return r.amount > 0; })
       .sort(function (a, b) { return b.amount - a.amount; });
 
@@ -1031,7 +1033,7 @@
       li.className = 'legend-item';
       li.innerHTML =
         '<span class="legend-swatch" style="background:var(' + r.cat.color + ')"></span>' +
-        '<span class="legend-name">' + (i + 1) + '. ' + r.cat.icon + ' ' + r.cat.name + '</span>' +
+        '<span class="legend-name">' + (i + 1) + '. ' + r.cat.icon + ' ' + r.cat.name + '（' + r.count + '筆）</span>' +
         '<span class="legend-pct">' + pct + '%</span>' +
         '<span class="legend-amount">' + formatMoney(r.amount) + '</span>';
       list2.appendChild(li);
@@ -1208,16 +1210,17 @@
         });
       }
     } else {
-      var totals = {}, grand = 0;
+      var totals = {}, counts = {}, grand = 0;
       transactions.forEach(function (t) {
         if (t.type !== rankType) return;
         if (!txMatchesAccountFilter(t)) return;
         if (!rankMatchesScope(t)) return;
         totals[t.categoryId] = (totals[t.categoryId] || 0) + t.amount;
+        counts[t.categoryId] = (counts[t.categoryId] || 0) + 1;
         grand += t.amount;
       });
       var rows = categoriesFor(rankType)
-        .map(function (c) { return { cat: c, amount: totals[c.id] || 0 }; })
+        .map(function (c) { return { cat: c, amount: totals[c.id] || 0, count: counts[c.id] || 0 }; })
         .filter(function (r) { return r.amount > 0; })
         .sort(function (a, b) { return b.amount - a.amount; });
       if (rows.length === 0) {
@@ -1225,7 +1228,7 @@
       } else {
         rows.forEach(function (r, i) {
           var pct = grand ? Math.round((r.amount / grand) * 100) : 0;
-          lines.push((i + 1) + '. ' + r.cat.name + '　' + formatMoney(r.amount) + '　' + pct + '%');
+          lines.push((i + 1) + '. ' + r.cat.name + '（' + r.count + '筆）　' + formatMoney(r.amount) + '　' + pct + '%');
         });
       }
     }
