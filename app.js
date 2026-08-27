@@ -1307,6 +1307,47 @@
         });
       }
     }
+    lines.push('');
+
+    lines.push('■ 品項月趨勢表（' + rankTypeLabel + '｜' + catLabel + '，筆數）');
+    var tableMatches = transactions.filter(function (t) {
+      if (t.type !== rankType) return false;
+      if (typeof t.date !== 'string' || t.date.length < 7) return false;
+      if (!txMatchesAccountFilter(t)) return false;
+      if (selectedCat && t.categoryId !== selectedCat) return false;
+      return true;
+    });
+    if (tableMatches.length === 0) {
+      lines.push('（還沒有資料）');
+    } else {
+      var tRowKeyFor = selectedCat
+        ? function (t) { return t.note && t.note.trim() ? t.note.trim() : '（無備註）'; }
+        : function (t) { return t.categoryId; };
+      var tRowLabelFor = selectedCat
+        ? function (key) { return key; }
+        : function (key) { var cat = findCategory(rankType, key); return cat.icon + ' ' + cat.name; };
+
+      var tMonthSet = {};
+      tableMatches.forEach(function (t) { tMonthSet[t.date.slice(0, 7)] = true; });
+      var tMonths = Object.keys(tMonthSet).sort();
+
+      var tCounts = {}, tRowTotals = {};
+      tableMatches.forEach(function (t) {
+        var key = tRowKeyFor(t);
+        var month = t.date.slice(0, 7);
+        tCounts[key] = tCounts[key] || {};
+        tCounts[key][month] = (tCounts[key][month] || 0) + 1;
+        tRowTotals[key] = (tRowTotals[key] || 0) + 1;
+      });
+      var tRowKeys = Object.keys(tRowTotals).sort(function (a, b) { return tRowTotals[b] - tRowTotals[a]; });
+
+      tRowKeys.forEach(function (key) {
+        var parts = tMonths.map(function (m) {
+          return m + '=' + ((tCounts[key] && tCounts[key][m]) || 0);
+        });
+        lines.push(tRowLabelFor(key) + '：' + parts.join('、') + '　合計=' + tRowTotals[key]);
+      });
+    }
 
     return lines.join('\n');
   }
