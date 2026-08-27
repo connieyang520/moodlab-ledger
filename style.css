@@ -614,6 +614,54 @@ input {
   margin-bottom: 12px;
 }
 
+.trend-table-scroll {
+  overflow-x: auto;
+  border: 1px solid var(--gridline);
+  border-radius: 10px;
+}
+
+.trend-table {
+  border-collapse: collapse;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.trend-table th,
+.trend-table td {
+  padding: 8px 10px;
+  text-align: right;
+  border-bottom: 1px solid var(--gridline);
+}
+
+.trend-table th:first-child,
+.trend-table td:first-child {
+  text-align: left;
+  position: sticky;
+  left: 0;
+  background: var(--surface-1);
+  font-weight: 600;
+  box-shadow: 1px 0 0 var(--gridline);
+}
+
+.trend-table thead th {
+  color: var(--text-muted);
+  font-weight: 600;
+  background: var(--page-plane);
+}
+
+.trend-table tbody tr:last-child th,
+.trend-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.trend-table tfoot td,
+.trend-table tfoot th {
+  font-weight: 700;
+  border-top: 2px solid var(--gridline);
+  border-bottom: none;
+}
+
 .report-trend-list {
   display: flex;
   flex-direction: column;

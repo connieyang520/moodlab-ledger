@@ -1040,6 +1040,68 @@
     });
   }
 
+  function renderItemMonthTable() {
+    var selectedCat = rankCategorySelect.value;
+    var table = document.getElementById('itemMonthTable');
+
+    var matches = transactions.filter(function (t) {
+      if (t.type !== rankType) return false;
+      if (!txMatchesAccountFilter(t)) return false;
+      if (selectedCat && t.categoryId !== selectedCat) return false;
+      return true;
+    });
+
+    if (matches.length === 0) {
+      table.innerHTML = '<tr><td class="empty-state">還沒有資料</td></tr>';
+      return;
+    }
+
+    function rowKeyFor(t) {
+      if (selectedCat) return t.note && t.note.trim() ? t.note.trim() : '（無備註）';
+      return t.categoryId;
+    }
+    function rowLabelFor(key) {
+      if (selectedCat) return key;
+      var cat = findCategory(rankType, key);
+      return cat.icon + ' ' + cat.name;
+    }
+
+    var monthSet = {};
+    matches.forEach(function (t) { monthSet[t.date.slice(0, 7)] = true; });
+    var months = Object.keys(monthSet).sort();
+
+    var counts = {};
+    var rowTotals = {};
+    var monthTotals = {};
+    matches.forEach(function (t) {
+      var key = rowKeyFor(t);
+      var month = t.date.slice(0, 7);
+      counts[key] = counts[key] || {};
+      counts[key][month] = (counts[key][month] || 0) + 1;
+      rowTotals[key] = (rowTotals[key] || 0) + 1;
+      monthTotals[month] = (monthTotals[month] || 0) + 1;
+    });
+
+    var rowKeys = Object.keys(rowTotals).sort(function (a, b) { return rowTotals[b] - rowTotals[a]; });
+
+    var html = '<thead><tr><th>品項</th>';
+    months.forEach(function (m) { html += '<th>' + m.slice(2).replace('-', '/') + '</th>'; });
+    html += '<th>合計</th></tr></thead><tbody>';
+    rowKeys.forEach(function (key) {
+      html += '<tr><td>' + rowLabelFor(key) + '</td>';
+      months.forEach(function (m) {
+        var c = (counts[key] && counts[key][m]) || 0;
+        html += '<td>' + (c || '—') + '</td>';
+      });
+      html += '<td>' + rowTotals[key] + '</td></tr>';
+    });
+    html += '</tbody><tfoot><tr><td>合計</td>';
+    months.forEach(function (m) { html += '<td>' + (monthTotals[m] || 0) + '</td>'; });
+    html += '<td>' + matches.length + '</td></tr></tfoot>';
+
+    table.innerHTML = html;
+  }
+
   var rankTypeBtns = document.querySelectorAll('#rankTypeToggle .stats-toggle-btn');
   rankTypeBtns.forEach(function (btn) {
     btn.addEventListener('click', function () {
@@ -1050,10 +1112,14 @@
       });
       populateRankCategorySelect();
       renderRanking();
+      renderItemMonthTable();
     });
   });
 
-  rankCategorySelect.addEventListener('change', renderRanking);
+  rankCategorySelect.addEventListener('change', function () {
+    renderRanking();
+    renderItemMonthTable();
+  });
 
   var rankScopeBtns = document.querySelectorAll('#rankScopeToggle .stats-toggle-btn');
   var rankMonthInput = document.getElementById('rankMonthInput');
@@ -1297,6 +1363,7 @@
     rankRangeTo.value = '';
     populateRankCategorySelect();
     renderRanking();
+    renderItemMonthTable();
     document.getElementById('searchKeyword').value = '';
     document.getElementById('searchAmountMin').value = '';
     document.getElementById('searchAmountMax').value = '';
