@@ -1041,11 +1041,20 @@
   }
 
   function renderItemMonthTable() {
-    var selectedCat = rankCategorySelect.value;
     var table = document.getElementById('itemMonthTable');
+    try {
+      renderItemMonthTableInner(table);
+    } catch (err) {
+      table.innerHTML = '<tr><td class="empty-state">表格顯示發生錯誤：' + err.message + '</td></tr>';
+    }
+  }
+
+  function renderItemMonthTableInner(table) {
+    var selectedCat = rankCategorySelect.value;
 
     var matches = transactions.filter(function (t) {
       if (t.type !== rankType) return false;
+      if (typeof t.date !== 'string' || t.date.length < 7) return false;
       if (!txMatchesAccountFilter(t)) return false;
       if (selectedCat && t.categoryId !== selectedCat) return false;
       return true;
