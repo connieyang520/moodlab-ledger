@@ -863,6 +863,7 @@
   var reportBackdrop = document.getElementById('reportBackdrop');
   var rankType = 'expense';
   var rankScope = 'all';
+  var monthlyTrendExpanded = false;
 
   function txMatchesAccountFilter(t) {
     if (accountFilter === 'all') return true;
@@ -912,13 +913,15 @@
         if (t.fromAccount === accountFilter) byMonth[key].transfer -= t.amount;
       }
     });
-    var keys = Object.keys(byMonth).sort().reverse();
+    var allKeys = Object.keys(byMonth).sort().reverse();
     var container = document.getElementById('monthlyTrendList');
     container.innerHTML = '';
-    if (keys.length === 0) {
+    if (allKeys.length === 0) {
       container.innerHTML = '<p class="empty-state">還沒有資料</p>';
       return;
     }
+    var MONTHLY_TREND_PAGE = 12;
+    var keys = monthlyTrendExpanded ? allKeys : allKeys.slice(0, MONTHLY_TREND_PAGE);
     keys.forEach(function (key) {
       var m = byMonth[key];
       var row = document.createElement('div');
@@ -939,6 +942,19 @@
       row.innerHTML = html;
       container.appendChild(row);
     });
+    if (allKeys.length > MONTHLY_TREND_PAGE) {
+      var toggleBtn = document.createElement('button');
+      toggleBtn.type = 'button';
+      toggleBtn.className = 'report-trend-toggle';
+      toggleBtn.textContent = monthlyTrendExpanded
+        ? '收合，只顯示最近 ' + MONTHLY_TREND_PAGE + ' 個月'
+        : '顯示全部 ' + allKeys.length + ' 個月（目前顯示最近 ' + MONTHLY_TREND_PAGE + ' 個月）';
+      toggleBtn.addEventListener('click', function () {
+        monthlyTrendExpanded = !monthlyTrendExpanded;
+        renderMonthlyTrend();
+      });
+      container.appendChild(toggleBtn);
+    }
   }
 
   var rankCategorySelect = document.getElementById('rankCategorySelect');
@@ -1406,6 +1422,7 @@
   });
 
   function openReport() {
+    monthlyTrendExpanded = false;
     renderReportBalances();
     renderMonthlyTrend();
     rankScope = 'all';
