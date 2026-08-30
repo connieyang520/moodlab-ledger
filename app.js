@@ -998,12 +998,13 @@
 
   function renderRanking() {
     var selectedCat = rankCategorySelect.value;
+    var rows, grand;
 
     if (selectedCat) {
       // Item-level breakdown within one category, grouped by note text.
       var itemTotals = {};
       var itemCounts = {};
-      var grandItem = 0;
+      grand = 0;
       transactions.forEach(function (t) {
         if (t.type !== rankType || t.categoryId !== selectedCat) return;
         if (!txMatchesAccountFilter(t)) return;
@@ -1011,65 +1012,78 @@
         var key = groupingKeyForNote(t.note);
         itemTotals[key] = (itemTotals[key] || 0) + t.amount;
         itemCounts[key] = (itemCounts[key] || 0) + 1;
-        grandItem += t.amount;
+        grand += t.amount;
       });
       var itemRows = Object.keys(itemTotals)
-        .map(function (name) { return { name: name, amount: itemTotals[name], count: itemCounts[name] }; })
+        .map(function (name) { return { name: name, icon: '', amount: itemTotals[name], count: itemCounts[name] }; })
         .sort(function (a, b) { return b.amount - a.amount; });
 
-      var list = document.getElementById('rankList');
-      list.innerHTML = '';
-      if (itemRows.length === 0) {
-        list.innerHTML = '<p class="empty-state">還沒有資料</p>';
-        return;
+      var TOP_N = 7;
+      rows = itemRows.slice(0, TOP_N);
+      rows.forEach(function (r, i) { r.color = '--series-' + (i + 1); });
+      if (itemRows.length > TOP_N) {
+        var rest = itemRows.slice(TOP_N);
+        var restAmount = rest.reduce(function (sum, r) { return sum + r.amount; }, 0);
+        var restCount = rest.reduce(function (sum, r) { return sum + r.count; }, 0);
+        rows.push({ name: '其他（' + rest.length + ' 項）', icon: '', amount: restAmount, count: restCount, color: '--series-8' });
       }
-      itemRows.forEach(function (r, i) {
-        var pct = grandItem ? Math.round((r.amount / grandItem) * 100) : 0;
-        var li = document.createElement('li');
-        li.className = 'legend-item';
-        li.innerHTML =
-          '<span class="legend-swatch" style="background:var(--brand-accent)"></span>' +
-          '<span class="legend-name">' + (i + 1) + '. ' + r.name + '（' + r.count + '筆）</span>' +
-          '<span class="legend-pct">' + pct + '%</span>' +
-          '<span class="legend-amount">' + formatMoney(r.amount) + '</span>';
-        list.appendChild(li);
+    } else {
+      var totals = {};
+      var counts = {};
+      grand = 0;
+      transactions.forEach(function (t) {
+        if (t.type !== rankType) return;
+        if (!txMatchesAccountFilter(t)) return;
+        if (!rankMatchesScope(t)) return;
+        totals[t.categoryId] = (totals[t.categoryId] || 0) + t.amount;
+        counts[t.categoryId] = (counts[t.categoryId] || 0) + 1;
+        grand += t.amount;
       });
+      rows = categoriesFor(rankType)
+        .map(function (c) { return { name: c.name, icon: c.icon, amount: totals[c.id] || 0, count: counts[c.id] || 0, color: c.color }; })
+        .filter(function (r) { return r.amount > 0; })
+        .sort(function (a, b) { return b.amount - a.amount; });
+    }
+
+    var list = document.getElementById('rankList');
+    var donut = document.getElementById('rankDonutChart');
+    var centerLabel = document.getElementById('rankDonutCenterLabel');
+    var centerValue = document.getElementById('rankDonutCenterValue');
+    list.innerHTML = '';
+
+    if (rows.length === 0 || grand <= 0) {
+      list.innerHTML = '<p class="empty-state">還沒有資料</p>';
+      donut.style.background = 'var(--gridline)';
+      centerLabel.textContent = rankType === 'income' ? '收入總額' : '支出總額';
+      centerValue.textContent = '$0';
       return;
     }
 
-    var totals = {};
-    var counts = {};
-    var grand = 0;
-    transactions.forEach(function (t) {
-      if (t.type !== rankType) return;
-      if (!txMatchesAccountFilter(t)) return;
-      if (!rankMatchesScope(t)) return;
-      totals[t.categoryId] = (totals[t.categoryId] || 0) + t.amount;
-      counts[t.categoryId] = (counts[t.categoryId] || 0) + 1;
-      grand += t.amount;
+    centerLabel.textContent = rankType === 'income' ? '收入總額' : '支出總額';
+    centerValue.textContent = formatMoney(grand);
+
+    var gradientParts = [];
+    var angle = 0;
+    rows.forEach(function (r) {
+      var pct = r.amount / grand;
+      var start = angle;
+      var end = angle + pct * 360;
+      gradientParts.push('var(' + r.color + ') ' + start.toFixed(2) + 'deg ' + end.toFixed(2) + 'deg');
+      angle = end;
     });
-    var cats = categoriesFor(rankType);
-    var rows = cats
-      .map(function (c) { return { cat: c, amount: totals[c.id] || 0, count: counts[c.id] || 0 }; })
-      .filter(function (r) { return r.amount > 0; })
-      .sort(function (a, b) { return b.amount - a.amount; });
+    donut.style.background = 'conic-gradient(' + gradientParts.join(', ') + ')';
 
-    var list2 = document.getElementById('rankList');
-    list2.innerHTML = '';
-    if (rows.length === 0) {
-      list2.innerHTML = '<p class="empty-state">還沒有資料</p>';
-      return;
-    }
     rows.forEach(function (r, i) {
-      var pct = grand ? Math.round((r.amount / grand) * 100) : 0;
+      var pct = Math.round((r.amount / grand) * 100);
       var li = document.createElement('li');
       li.className = 'legend-item';
+      var label = r.icon ? (r.icon + ' ' + r.name) : r.name;
       li.innerHTML =
-        '<span class="legend-swatch" style="background:var(' + r.cat.color + ')"></span>' +
-        '<span class="legend-name">' + (i + 1) + '. ' + r.cat.icon + ' ' + r.cat.name + '（' + r.count + '筆）</span>' +
+        '<span class="legend-swatch" style="background:var(' + r.color + ')"></span>' +
+        '<span class="legend-name">' + (i + 1) + '. ' + label + '（' + r.count + '筆）</span>' +
         '<span class="legend-pct">' + pct + '%</span>' +
         '<span class="legend-amount">' + formatMoney(r.amount) + '</span>';
-      list2.appendChild(li);
+      list.appendChild(li);
     });
   }
 
