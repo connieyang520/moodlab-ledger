@@ -227,12 +227,13 @@
         <input type="date" id="searchDateTo" class="field-input">
       </div>
       <button class="save-btn report-search-btn" id="searchBtn">搜尋</button>
+      <button class="save-btn backup-btn-secondary report-search-btn" id="copySearchBtn" hidden>📋 複製搜尋結果</button>
       <p class="empty-state" id="searchEmpty" hidden>沒有符合的記錄</p>
       <div id="searchResults" class="tx-list"></div>
     </section>
 
     <section class="report-section">
-      <h3 class="report-section-title">各月統計</h3>
+      <h3 class="report-section-title" id="monthlyTrendTitle">各月統計</h3>
       <div id="monthlyTrendList" class="report-trend-list"></div>
     </section>
 

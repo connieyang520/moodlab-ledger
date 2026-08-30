@@ -899,10 +899,20 @@
     document.getElementById('balanceTotal').textContent = formatMoney(b.personal + b.company);
   }
 
+  function currentScopeLabel() {
+    if (rankScope === 'all') return '累計至今';
+    if (rankScope === 'month') return '指定月份：' + document.getElementById('rankMonthInput').value;
+    return '指定範圍：' + (document.getElementById('rankRangeFrom').value || '不限') + ' ~ ' + (document.getElementById('rankRangeTo').value || '不限');
+  }
+
   function renderMonthlyTrend() {
+    var titleEl = document.getElementById('monthlyTrendTitle');
+    if (titleEl) titleEl.textContent = '各月統計（' + currentScopeLabel() + '）';
+
     var byMonth = {};
     transactions.forEach(function (t) {
       if (!txMatchesAccountFilter(t)) return;
+      if (rankScope !== 'all' && !rankMatchesScope(t)) return;
       var d = new Date(t.date + 'T00:00:00');
       var key = d.getFullYear() + '-' + pad(d.getMonth() + 1);
       if (!byMonth[key]) byMonth[key] = { income: 0, expense: 0, transfer: 0, incomeCount: 0, year: d.getFullYear(), month: d.getMonth() + 1 };
@@ -1173,12 +1183,19 @@
       });
       updateRankScopeInputsVisibility();
       renderRanking();
+      renderMonthlyTrend();
     });
   });
 
-  rankMonthInput.addEventListener('change', renderRanking);
-  rankRangeFrom.addEventListener('change', renderRanking);
-  rankRangeTo.addEventListener('change', renderRanking);
+  function rescopeChanged() {
+    renderRanking();
+    renderMonthlyTrend();
+  }
+  rankMonthInput.addEventListener('change', rescopeChanged);
+  rankRangeFrom.addEventListener('change', rescopeChanged);
+  rankRangeTo.addEventListener('change', rescopeChanged);
+
+  var lastSearchResults = [];
 
   function runSearch() {
     var kw = document.getElementById('searchKeyword').value.trim().toLowerCase();
@@ -1201,20 +1218,62 @@
       return true;
     }).sort(function (a, b) { return a.date < b.date ? 1 : -1; });
 
+    lastSearchResults = results;
+
     var container = document.getElementById('searchResults');
     var emptyEl = document.getElementById('searchEmpty');
+    var copyBtn = document.getElementById('copySearchBtn');
     container.innerHTML = '';
     if (results.length === 0) {
       emptyEl.hidden = false;
+      copyBtn.hidden = true;
       return;
     }
     emptyEl.hidden = true;
+    copyBtn.hidden = false;
+    copyBtn.textContent = '📋 複製這 ' + results.length + ' 筆搜尋結果';
     results.slice(0, 200).forEach(function (t) {
       container.appendChild(buildTxItemEl(t, { showDate: true, showAccountTag: accountFilter === 'all' }));
     });
   }
 
   document.getElementById('searchBtn').addEventListener('click', runSearch);
+
+  document.getElementById('copySearchBtn').addEventListener('click', function () {
+    var lines = [];
+    lines.push('【Mood Lab 記帳本搜尋結果】');
+    lines.push('產生時間：' + todayStr());
+    lines.push('共 ' + lastSearchResults.length + ' 筆');
+    lines.push('');
+    var total = 0;
+    lastSearchResults.forEach(function (t) {
+      if (t.type === 'transfer') {
+        lines.push(t.date + '　轉帳　' + ACCOUNT_NAMES[t.fromAccount] + '→' + ACCOUNT_NAMES[t.toAccount] + '　' + formatMoney(t.amount) + (t.note ? '　' + t.note : ''));
+      } else {
+        var cat = findCategory(t.type, t.categoryId);
+        var sign = t.type === 'income' ? '+' : '-';
+        lines.push(t.date + '　' + (t.type === 'income' ? '收入' : '支出') + '｜' + cat.name + '　' + ACCOUNT_NAMES[t.account] + '帳　' + sign + formatMoney(t.amount) + (t.note ? '　' + t.note : ''));
+        total += (t.type === 'income' ? t.amount : -t.amount);
+      }
+    });
+    lines.push('');
+    lines.push('合計（不含轉帳）：' + formatMoney(total));
+    var text = lines.join('\n');
+
+    var btn = this;
+    var originalLabel = btn.textContent;
+    function showCopied() {
+      btn.textContent = '已複製！貼給 AI 就可以了';
+      setTimeout(function () { btn.textContent = originalLabel; }, 2000);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(showCopied).catch(function () {
+        window.prompt('請手動複製以下文字：', text);
+      });
+    } else {
+      window.prompt('請手動複製以下文字：', text);
+    }
+  });
 
   // ---------- Backup export / import ----------
   function exportBackup() {
@@ -1251,6 +1310,7 @@
     var byMonth = {};
     transactions.forEach(function (t) {
       if (!txMatchesAccountFilter(t)) return;
+      if (rankScope !== 'all' && !rankMatchesScope(t)) return;
       var d = new Date(t.date + 'T00:00:00');
       var key = d.getFullYear() + '-' + pad(d.getMonth() + 1);
       if (!byMonth[key]) byMonth[key] = { income: 0, expense: 0, transfer: 0, incomeCount: 0 };
@@ -1262,7 +1322,7 @@
       }
     });
     var monthKeys = Object.keys(byMonth).sort().reverse();
-    lines.push('■ 各月統計');
+    lines.push('■ 各月統計（' + currentScopeLabel() + '）');
     if (monthKeys.length === 0) {
       lines.push('（還沒有資料）');
     } else {
@@ -1278,9 +1338,7 @@
     lines.push('');
 
     var rankTypeLabel = rankType === 'income' ? '收入' : '支出';
-    var scopeLabel = rankScope === 'all' ? '累計至今'
-      : rankScope === 'month' ? '指定月份（' + document.getElementById('rankMonthInput').value + '）'
-      : '指定範圍（' + (document.getElementById('rankRangeFrom').value || '不限') + ' ~ ' + (document.getElementById('rankRangeTo').value || '不限') + '）';
+    var scopeLabel = currentScopeLabel();
     var selectedCat = rankCategorySelect.value;
     var catLabel = selectedCat ? findCategory(rankType, selectedCat).name + '細項' : '全部分類';
     lines.push('■ 項目排名（' + rankTypeLabel + '｜' + scopeLabel + '｜' + catLabel + '）');
@@ -1332,7 +1390,7 @@
     }
     lines.push('');
 
-    lines.push('■ 品項月趨勢表（' + rankTypeLabel + '｜' + catLabel + '，筆數）');
+    lines.push('■ 品項月趨勢表（' + rankTypeLabel + '｜' + catLabel + '，筆數；固定顯示全部月份，不受時段篩選影響）');
     var tableMatches = transactions.filter(function (t) {
       if (t.type !== rankType) return false;
       if (typeof t.date !== 'string' || t.date.length < 7) return false;
