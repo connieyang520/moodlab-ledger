@@ -224,6 +224,13 @@
     return '$' + parts.join('.');
   }
 
+  function groupingKeyForNote(note) {
+    var trimmed = note && note.trim() ? note.trim() : '（無備註）';
+    var parenIdx = trimmed.indexOf('（');
+    if (parenIdx > 0) return trimmed.slice(0, parenIdx).trim();
+    return trimmed;
+  }
+
   function todayStr() {
     var d = new Date();
     return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
@@ -975,7 +982,7 @@
         if (t.type !== rankType || t.categoryId !== selectedCat) return;
         if (!txMatchesAccountFilter(t)) return;
         if (!rankMatchesScope(t)) return;
-        var key = t.note && t.note.trim() ? t.note.trim() : '（無備註）';
+        var key = groupingKeyForNote(t.note);
         itemTotals[key] = (itemTotals[key] || 0) + t.amount;
         itemCounts[key] = (itemCounts[key] || 0) + 1;
         grandItem += t.amount;
@@ -1066,7 +1073,7 @@
     }
 
     function rowKeyFor(t) {
-      if (selectedCat) return t.note && t.note.trim() ? t.note.trim() : '（無備註）';
+      if (selectedCat) return groupingKeyForNote(t.note);
       return t.categoryId;
     }
     function rowLabelFor(key) {
@@ -1268,7 +1275,7 @@
         if (t.type !== rankType || t.categoryId !== selectedCat) return;
         if (!txMatchesAccountFilter(t)) return;
         if (!rankMatchesScope(t)) return;
-        var key = t.note && t.note.trim() ? t.note.trim() : '（無備註）';
+        var key = groupingKeyForNote(t.note);
         itemTotals[key] = (itemTotals[key] || 0) + t.amount;
         itemCounts[key] = (itemCounts[key] || 0) + 1;
         grandItem += t.amount;
@@ -1321,7 +1328,7 @@
       lines.push('（還沒有資料）');
     } else {
       var tRowKeyFor = selectedCat
-        ? function (t) { return t.note && t.note.trim() ? t.note.trim() : '（無備註）'; }
+        ? function (t) { return groupingKeyForNote(t.note); }
         : function (t) { return t.categoryId; };
       var tRowLabelFor = selectedCat
         ? function (key) { return key; }
