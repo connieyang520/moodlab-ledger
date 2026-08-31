@@ -308,6 +308,7 @@
   var assetUsdRateInput = document.getElementById('assetUsdRateInput');
   var assetUsdDepositInput = document.getElementById('assetUsdDepositInput');
   var assetUsdHint = document.getElementById('assetUsdHint');
+  var assetRateWarning = document.getElementById('assetRateWarning');
   var assetTotalValue = document.getElementById('assetTotalValue');
   var assetDeltaRow = document.getElementById('assetDeltaRow');
   var assetDeltaValue = document.getElementById('assetDeltaValue');
@@ -960,6 +961,11 @@
     var total = vals.deposits + vals.stocks + vals.funds + usStockTwd + usdDepositTwd + insuranceTwd;
     assetTotalValue.textContent = formatMoney(total);
 
+    var hasUsdAmounts = vals.usStockUsd > 0 || vals.usdDepositUsd > 0 || vals.insuranceUsd > 0;
+    var rateMissing = vals.usdRate <= 0 && hasUsdAmounts;
+    assetRateWarning.hidden = !rateMissing;
+    assetUsdRateInput.classList.toggle('rate-warning', rateMissing);
+
     var prev = latestAssetSnapshotBefore(selectedAssetMonth);
     if (prev) {
       var prevTotal = assetSnapshotTotal(prev);
@@ -1097,6 +1103,11 @@
 
   assetSaveBtn.addEventListener('click', function () {
     var vals = currentFormAssetValues();
+    var hasUsdAmounts = vals.usStockUsd > 0 || vals.usdDepositUsd > 0 || vals.insuranceUsd > 0;
+    if (vals.usdRate <= 0 && hasUsdAmounts) {
+      var proceed = confirm('美金匯率是 0，美股／外幣存款／保險金額不會被計入總淨值，確定要這樣儲存嗎？');
+      if (!proceed) return;
+    }
     var idx = assetSnapshots.findIndex(function (s) { return s.month === selectedAssetMonth; });
     var snapshot = {
       id: idx >= 0 ? assetSnapshots[idx].id : Date.now().toString(36) + Math.random().toString(36).slice(2, 7),

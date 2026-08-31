@@ -868,6 +868,15 @@ input {
   color: var(--text-muted);
 }
 
+.asset-rate-warning {
+  margin: -8px 0 16px;
+  font-size: 12px;
+  color: var(--critical);
+  font-weight: 600;
+}
+
+#assetUsdRateInput.rate-warning { border-color: var(--critical); }
+
 .asset-summary-card { margin-left: 0; margin-right: 0; }
 
 .asset-history-section { margin-top: 16px; padding: 0; border: none; }
