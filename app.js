@@ -927,8 +927,9 @@
   }
 
   function assetSnapshotTotal(s) {
-    return (s.deposits || 0) + (s.stocks || 0) + (s.funds || 0) + (s.insurance || 0) +
-      (s.usStockUsd || 0) * (s.usdRate || 0) + (s.usdDepositUsd || 0) * (s.usdRate || 0);
+    return (s.deposits || 0) + (s.stocks || 0) + (s.funds || 0) +
+      (s.usStockUsd || 0) * (s.usdRate || 0) + (s.usdDepositUsd || 0) * (s.usdRate || 0) +
+      (s.insuranceUsd || 0) * (s.usdRate || 0);
   }
 
   function latestAssetSnapshotBefore(month) {
@@ -943,10 +944,10 @@
       deposits: parseFloat(assetDepositsInput.value) || 0,
       stocks: parseFloat(assetStocksInput.value) || 0,
       funds: parseFloat(assetFundsInput.value) || 0,
-      insurance: parseFloat(assetInsuranceInput.value) || 0,
       usStockUsd: parseFloat(assetUsStockInput.value) || 0,
       usdRate: parseFloat(assetUsdRateInput.value) || 0,
-      usdDepositUsd: parseFloat(assetUsdDepositInput.value) || 0
+      usdDepositUsd: parseFloat(assetUsdDepositInput.value) || 0,
+      insuranceUsd: parseFloat(assetInsuranceInput.value) || 0
     };
   }
 
@@ -954,8 +955,9 @@
     var vals = currentFormAssetValues();
     var usStockTwd = vals.usStockUsd * vals.usdRate;
     var usdDepositTwd = vals.usdDepositUsd * vals.usdRate;
-    assetUsdHint.textContent = '美股換算台幣：' + formatMoney(usStockTwd) + '　外幣存款換算台幣：' + formatMoney(usdDepositTwd);
-    var total = vals.deposits + vals.stocks + vals.funds + vals.insurance + usStockTwd + usdDepositTwd;
+    var insuranceTwd = vals.insuranceUsd * vals.usdRate;
+    assetUsdHint.textContent = '美股換算台幣：' + formatMoney(usStockTwd) + '　外幣存款換算台幣：' + formatMoney(usdDepositTwd) + '　保險換算台幣：' + formatMoney(insuranceTwd);
+    var total = vals.deposits + vals.stocks + vals.funds + usStockTwd + usdDepositTwd + insuranceTwd;
     assetTotalValue.textContent = formatMoney(total);
 
     var prev = latestAssetSnapshotBefore(selectedAssetMonth);
@@ -973,7 +975,7 @@
 
     var rows = ASSET_CATEGORIES
       .map(function (c) {
-        var amount = c.id === 'usStock' ? usStockTwd : c.id === 'usdDeposit' ? usdDepositTwd : vals[c.id];
+        var amount = c.id === 'usStock' ? usStockTwd : c.id === 'usdDeposit' ? usdDepositTwd : c.id === 'insurance' ? insuranceTwd : vals[c.id];
         return { cat: c, amount: amount };
       })
       .filter(function (r) { return r.amount > 0; })
@@ -1075,7 +1077,7 @@
     assetDepositsInput.value = src ? src.deposits : '';
     assetStocksInput.value = src ? src.stocks : '';
     assetFundsInput.value = src ? src.funds : '';
-    assetInsuranceInput.value = src ? src.insurance : '';
+    assetInsuranceInput.value = src ? src.insuranceUsd : '';
     assetUsStockInput.value = src ? src.usStockUsd : '';
     assetUsdRateInput.value = src ? src.usdRate : '';
     assetUsdDepositInput.value = src ? src.usdDepositUsd : '';
@@ -1102,10 +1104,10 @@
       deposits: vals.deposits,
       stocks: vals.stocks,
       funds: vals.funds,
-      insurance: vals.insurance,
       usStockUsd: vals.usStockUsd,
       usdRate: vals.usdRate,
       usdDepositUsd: vals.usdDepositUsd,
+      insuranceUsd: vals.insuranceUsd,
       updatedAt: new Date().toISOString()
     };
     if (idx >= 0) assetSnapshots[idx] = snapshot;
@@ -1703,14 +1705,15 @@
       var latestSnapshot = assetSnapshots.slice().sort(function (a, b) { return a.month < b.month ? 1 : -1; })[0];
       var usStockTwd = (latestSnapshot.usStockUsd || 0) * (latestSnapshot.usdRate || 0);
       var usdDepositTwd = (latestSnapshot.usdDepositUsd || 0) * (latestSnapshot.usdRate || 0);
+      var insuranceTwd = (latestSnapshot.insuranceUsd || 0) * (latestSnapshot.usdRate || 0);
       lines.push('');
       lines.push('■ 資產總覽（' + latestSnapshot.month.replace('-', '/') + '）');
       lines.push('存款：' + formatMoney(latestSnapshot.deposits || 0));
       lines.push('股票：' + formatMoney(latestSnapshot.stocks || 0));
       lines.push('基金：' + formatMoney(latestSnapshot.funds || 0));
-      lines.push('保險：' + formatMoney(latestSnapshot.insurance || 0));
       lines.push('美股：US' + formatMoney(latestSnapshot.usStockUsd || 0) + '（約台幣 ' + formatMoney(usStockTwd) + '）');
       lines.push('外幣美元存款：US' + formatMoney(latestSnapshot.usdDepositUsd || 0) + '（約台幣 ' + formatMoney(usdDepositTwd) + '）');
+      lines.push('保險（美金保單）：US' + formatMoney(latestSnapshot.insuranceUsd || 0) + '（約台幣 ' + formatMoney(insuranceTwd) + '）');
       lines.push('總淨值：' + formatMoney(assetSnapshotTotal(latestSnapshot)));
     }
 
