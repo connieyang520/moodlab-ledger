@@ -11,7 +11,7 @@
 <meta name="apple-mobile-web-app-title" content="記帳本">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
-<link rel="stylesheet" href="style.css?v=3">
+<link rel="stylesheet" href="style.css?v=4">
 </head>
 <body>
 
@@ -80,6 +80,76 @@
       <button class="report-open-btn" id="openReportBtn">📑 查看完整報表</button>
     </section>
 
+    <!-- Asset view -->
+    <section id="assetView" class="view" hidden>
+      <div class="asset-month-row">
+        <label class="field-label" for="assetMonthInput">記錄月份</label>
+        <input type="month" id="assetMonthInput" class="field-input">
+      </div>
+
+      <div class="field-group">
+        <label class="field-label" for="assetDepositsInput">💰 存款</label>
+        <input type="number" inputmode="decimal" id="assetDepositsInput" class="field-input" placeholder="0" min="0" step="1">
+      </div>
+      <div class="field-group">
+        <label class="field-label" for="assetStocksInput">📈 股票</label>
+        <input type="number" inputmode="decimal" id="assetStocksInput" class="field-input" placeholder="0" min="0" step="1">
+      </div>
+      <div class="field-group">
+        <label class="field-label" for="assetFundsInput">📊 基金</label>
+        <input type="number" inputmode="decimal" id="assetFundsInput" class="field-input" placeholder="0" min="0" step="1">
+      </div>
+      <div class="field-group">
+        <label class="field-label" for="assetInsuranceInput">🛡️ 保險</label>
+        <input type="number" inputmode="decimal" id="assetInsuranceInput" class="field-input" placeholder="0" min="0" step="1">
+      </div>
+      <div class="field-row">
+        <div class="field-group half">
+          <label class="field-label" for="assetUsStockInput">🇺🇸 美股（USD）</label>
+          <input type="number" inputmode="decimal" id="assetUsStockInput" class="field-input" placeholder="0" min="0" step="0.01">
+        </div>
+        <div class="field-group half">
+          <label class="field-label" for="assetUsdRateInput">美金匯率</label>
+          <input type="number" inputmode="decimal" id="assetUsdRateInput" class="field-input" placeholder="31.5" min="0" step="0.01">
+        </div>
+      </div>
+      <div class="field-group">
+        <label class="field-label" for="assetUsdDepositInput">💵 外幣美元存款（USD）</label>
+        <input type="number" inputmode="decimal" id="assetUsdDepositInput" class="field-input" placeholder="0" min="0" step="0.01">
+      </div>
+      <p class="asset-usd-hint" id="assetUsdHint">美股換算台幣：$0　外幣存款換算台幣：$0</p>
+
+      <button class="save-btn" id="assetSaveBtn">儲存本月快照</button>
+
+      <section class="summary-card asset-summary-card">
+        <div class="summary-row">
+          <div class="summary-item">
+            <span class="summary-label">本月總淨值</span>
+            <span class="summary-value balance" id="assetTotalValue">$0</span>
+          </div>
+        </div>
+        <div class="summary-transfer-row" id="assetDeltaRow" hidden>
+          <span class="summary-transfer-label">較上次記錄</span>
+          <span class="summary-transfer-value" id="assetDeltaValue">$0</span>
+        </div>
+      </section>
+
+      <div class="donut-wrap">
+        <div class="donut" id="assetDonutChart" role="img" aria-label="資產配置圓環圖"></div>
+        <div class="donut-center">
+          <span class="donut-center-label">總淨值</span>
+          <span class="donut-center-value" id="assetDonutCenterValue">$0</span>
+        </div>
+      </div>
+      <ul class="legend" id="assetLegendList"></ul>
+      <p id="assetEmpty" class="empty-state" hidden>還沒有任何資產記錄<br>填上面的表單並儲存，開始追蹤淨值</p>
+
+      <section class="report-section asset-history-section">
+        <h3 class="report-section-title">淨值歷史</h3>
+        <div id="assetHistoryList" class="report-trend-list"></div>
+      </section>
+    </section>
+
   </main>
 
   <!-- FAB -->
@@ -92,6 +162,9 @@
     </button>
     <button class="tab-btn" id="tabStats" data-tab="statsView">
       <span class="tab-icon">📊</span><span>統計</span>
+    </button>
+    <button class="tab-btn" id="tabAsset" data-tab="assetView">
+      <span class="tab-icon">💎</span><span>資產</span>
     </button>
   </nav>
 
@@ -201,7 +274,7 @@
 
     <section class="report-section">
       <h3 class="report-section-title">資料備份</h3>
-      <p class="backup-hint">資料只存在這支手機的瀏覽器裡，建議定期匯出備份，換手機或清資料前才不會全部消失。</p>
+      <p class="backup-hint">資料只存在這支手機的瀏覽器裡（含記帳紀錄與資產快照），建議定期匯出備份，換手機或清資料前才不會全部消失。</p>
       <div class="backup-buttons">
         <button class="save-btn" id="exportBackupBtn">📤 匯出備份</button>
         <button class="save-btn backup-btn-secondary" id="importBackupBtn">📥 匯入備份</button>

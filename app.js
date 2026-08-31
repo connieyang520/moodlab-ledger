@@ -2,6 +2,7 @@
   'use strict';
 
   var STORAGE_KEY = 'ledger_transactions_v3';
+  var ASSET_STORAGE_KEY = 'asset_snapshots_v1';
 
   var EXPENSE_CATEGORIES = [
     { id: 'food', name: '餐飲', icon: '🍔', color: '--series-1' },
@@ -24,6 +25,15 @@
   var WEEKDAYS = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
 
   var ACCOUNT_NAMES = { personal: '個人', company: '公司' };
+
+  var ASSET_CATEGORIES = [
+    { id: 'deposits', name: '存款', icon: '💰', color: '--series-1' },
+    { id: 'stocks', name: '股票', icon: '📈', color: '--series-2' },
+    { id: 'funds', name: '基金', icon: '📊', color: '--series-3' },
+    { id: 'insurance', name: '保險', icon: '🛡️', color: '--series-4' },
+    { id: 'usStock', name: '美股', icon: '🇺🇸', color: '--series-5' },
+    { id: 'usdDeposit', name: '外幣美元存款', icon: '💵', color: '--series-6' }
+  ];
 
   var SERVICE_ITEM_GROUPS = [
     {
@@ -169,6 +179,7 @@
 
   // ---------- State ----------
   var transactions = load();
+  var assetSnapshots = loadAssets();
   var currentMonth = new Date();
   currentMonth.setDate(1);
   var activeTab = 'listView';
@@ -178,6 +189,8 @@
   var selectedCategoryId = null;
   var editingId = null;
   var accountFilter = localStorage.getItem('ledger_account_filter') || 'all';
+  var selectedAssetMonth = assetMonthKey(new Date());
+  var assetHistoryExpanded = false;
 
   // ---------- Storage ----------
   function load() {
@@ -192,6 +205,22 @@
       return seed;
     }
     return [];
+  }
+
+  function loadAssets() {
+    try {
+      var raw = localStorage.getItem(ASSET_STORAGE_KEY);
+      if (raw) return JSON.parse(raw);
+    } catch (e) {}
+    return [];
+  }
+
+  function persistAssets() {
+    localStorage.setItem(ASSET_STORAGE_KEY, JSON.stringify(assetSnapshots));
+  }
+
+  function assetMonthKey(date) {
+    return date.getFullYear() + '-' + pad(date.getMonth() + 1);
   }
 
   function persist() {
@@ -268,6 +297,29 @@
   var donutCenterValue = document.getElementById('donutCenterValue');
   var legendList = document.getElementById('legendList');
   var statsEmpty = document.getElementById('statsEmpty');
+
+  var assetView = document.getElementById('assetView');
+  var assetMonthInput = document.getElementById('assetMonthInput');
+  var assetDepositsInput = document.getElementById('assetDepositsInput');
+  var assetStocksInput = document.getElementById('assetStocksInput');
+  var assetFundsInput = document.getElementById('assetFundsInput');
+  var assetInsuranceInput = document.getElementById('assetInsuranceInput');
+  var assetUsStockInput = document.getElementById('assetUsStockInput');
+  var assetUsdRateInput = document.getElementById('assetUsdRateInput');
+  var assetUsdDepositInput = document.getElementById('assetUsdDepositInput');
+  var assetUsdHint = document.getElementById('assetUsdHint');
+  var assetTotalValue = document.getElementById('assetTotalValue');
+  var assetDeltaRow = document.getElementById('assetDeltaRow');
+  var assetDeltaValue = document.getElementById('assetDeltaValue');
+  var assetDonutChart = document.getElementById('assetDonutChart');
+  var assetDonutCenterValue = document.getElementById('assetDonutCenterValue');
+  var assetLegendList = document.getElementById('assetLegendList');
+  var assetEmpty = document.getElementById('assetEmpty');
+  var assetHistoryList = document.getElementById('assetHistoryList');
+  var headerEl = document.querySelector('.header');
+  var accountFilterEl = document.getElementById('accountFilter');
+  var summaryCardEl = document.querySelector('.summary-card');
+  var fabAddEl = document.getElementById('fabAdd');
 
   var modalBackdrop = document.getElementById('modalBackdrop');
   var modalTitle = document.getElementById('modalTitle');
@@ -557,6 +609,13 @@
       tabButtons.forEach(function (b) { b.classList.toggle('active', b === btn); });
       document.getElementById('listView').hidden = activeTab !== 'listView';
       document.getElementById('statsView').hidden = activeTab !== 'statsView';
+      assetView.hidden = activeTab !== 'assetView';
+      var onAsset = activeTab === 'assetView';
+      headerEl.hidden = onAsset;
+      accountFilterEl.hidden = onAsset;
+      summaryCardEl.hidden = onAsset;
+      fabAddEl.hidden = onAsset;
+      if (onAsset) renderAssetView();
     });
   });
 
@@ -857,6 +916,202 @@
     persist();
     closeModal();
     renderAll();
+  });
+
+  // ---------- Asset view ----------
+  var ASSET_HISTORY_PAGE = 12;
+  var assetSaveBtn = document.getElementById('assetSaveBtn');
+
+  function findAssetSnapshot(month) {
+    return assetSnapshots.filter(function (s) { return s.month === month; })[0] || null;
+  }
+
+  function assetSnapshotTotal(s) {
+    return (s.deposits || 0) + (s.stocks || 0) + (s.funds || 0) + (s.insurance || 0) +
+      (s.usStockUsd || 0) * (s.usdRate || 0) + (s.usdDepositUsd || 0) * (s.usdRate || 0);
+  }
+
+  function latestAssetSnapshotBefore(month) {
+    var before = assetSnapshots
+      .filter(function (s) { return s.month < month; })
+      .sort(function (a, b) { return a.month < b.month ? 1 : -1; });
+    return before[0] || null;
+  }
+
+  function currentFormAssetValues() {
+    return {
+      deposits: parseFloat(assetDepositsInput.value) || 0,
+      stocks: parseFloat(assetStocksInput.value) || 0,
+      funds: parseFloat(assetFundsInput.value) || 0,
+      insurance: parseFloat(assetInsuranceInput.value) || 0,
+      usStockUsd: parseFloat(assetUsStockInput.value) || 0,
+      usdRate: parseFloat(assetUsdRateInput.value) || 0,
+      usdDepositUsd: parseFloat(assetUsdDepositInput.value) || 0
+    };
+  }
+
+  function renderAssetSummary() {
+    var vals = currentFormAssetValues();
+    var usStockTwd = vals.usStockUsd * vals.usdRate;
+    var usdDepositTwd = vals.usdDepositUsd * vals.usdRate;
+    assetUsdHint.textContent = '美股換算台幣：' + formatMoney(usStockTwd) + '　外幣存款換算台幣：' + formatMoney(usdDepositTwd);
+    var total = vals.deposits + vals.stocks + vals.funds + vals.insurance + usStockTwd + usdDepositTwd;
+    assetTotalValue.textContent = formatMoney(total);
+
+    var prev = latestAssetSnapshotBefore(selectedAssetMonth);
+    if (prev) {
+      var prevTotal = assetSnapshotTotal(prev);
+      var delta = total - prevTotal;
+      var pct = prevTotal !== 0 ? (delta / Math.abs(prevTotal)) * 100 : 0;
+      assetDeltaRow.hidden = false;
+      assetDeltaValue.textContent = (delta >= 0 ? '+' : '') + formatMoney(delta) + '（' + (delta >= 0 ? '+' : '') + pct.toFixed(1) + '%，較 ' + prev.month.replace('-', '/') + '）';
+      assetDeltaValue.classList.toggle('positive', delta >= 0);
+      assetDeltaValue.classList.toggle('negative', delta < 0);
+    } else {
+      assetDeltaRow.hidden = true;
+    }
+
+    var rows = ASSET_CATEGORIES
+      .map(function (c) {
+        var amount = c.id === 'usStock' ? usStockTwd : c.id === 'usdDeposit' ? usdDepositTwd : vals[c.id];
+        return { cat: c, amount: amount };
+      })
+      .filter(function (r) { return r.amount > 0; })
+      .sort(function (a, b) { return b.amount - a.amount; });
+
+    assetDonutCenterValue.textContent = formatMoney(total);
+    assetLegendList.innerHTML = '';
+
+    if (total <= 0) {
+      assetDonutChart.style.background = 'var(--gridline)';
+      assetEmpty.hidden = false;
+      return;
+    }
+    assetEmpty.hidden = true;
+
+    var gradientParts = [];
+    var angle = 0;
+    rows.forEach(function (r) {
+      var pct = r.amount / total;
+      var start = angle;
+      var end = angle + pct * 360;
+      gradientParts.push('var(' + r.cat.color + ') ' + start.toFixed(2) + 'deg ' + end.toFixed(2) + 'deg');
+      angle = end;
+    });
+    assetDonutChart.style.background = 'conic-gradient(' + gradientParts.join(', ') + ')';
+
+    rows.forEach(function (r) {
+      var pct = Math.round((r.amount / total) * 100);
+      var li = document.createElement('li');
+      li.className = 'legend-item';
+
+      var swatch = document.createElement('span');
+      swatch.className = 'legend-swatch';
+      swatch.style.background = 'var(' + r.cat.color + ')';
+
+      var name = document.createElement('span');
+      name.className = 'legend-name';
+      name.textContent = r.cat.icon + ' ' + r.cat.name;
+
+      var pctEl = document.createElement('span');
+      pctEl.className = 'legend-pct';
+      pctEl.textContent = pct + '%';
+
+      var amt = document.createElement('span');
+      amt.className = 'legend-amount';
+      amt.textContent = formatMoney(r.amount);
+
+      li.appendChild(swatch);
+      li.appendChild(name);
+      li.appendChild(pctEl);
+      li.appendChild(amt);
+      assetLegendList.appendChild(li);
+    });
+  }
+
+  function renderAssetHistory() {
+    var sorted = assetSnapshots.slice().sort(function (a, b) { return a.month < b.month ? 1 : -1; });
+    assetHistoryList.innerHTML = '';
+    if (sorted.length === 0) {
+      assetHistoryList.innerHTML = '<p class="empty-state">還沒有任何淨值記錄</p>';
+      return;
+    }
+    var keys = assetHistoryExpanded ? sorted : sorted.slice(0, ASSET_HISTORY_PAGE);
+    keys.forEach(function (s) {
+      var total = assetSnapshotTotal(s);
+      var prev = latestAssetSnapshotBefore(s.month);
+      var row = document.createElement('div');
+      row.className = 'report-trend-row';
+      var html =
+        '<span class="report-trend-month">' + s.month.replace('-', '/') + '</span>' +
+        '<span class="report-trend-figures"><span class="balance">' + formatMoney(total) + '</span>';
+      if (prev) {
+        var delta = total - assetSnapshotTotal(prev);
+        html += '<span class="' + (delta >= 0 ? 'income' : 'expense') + '">' + (delta >= 0 ? '+' : '') + formatMoney(delta) + '</span>';
+      }
+      html += '</span>';
+      row.innerHTML = html;
+      assetHistoryList.appendChild(row);
+    });
+    if (sorted.length > ASSET_HISTORY_PAGE) {
+      var toggleBtn = document.createElement('button');
+      toggleBtn.type = 'button';
+      toggleBtn.className = 'report-trend-toggle';
+      toggleBtn.textContent = assetHistoryExpanded
+        ? '收合，只顯示最近 ' + ASSET_HISTORY_PAGE + ' 個月'
+        : '顯示全部 ' + sorted.length + ' 個月（目前顯示最近 ' + ASSET_HISTORY_PAGE + ' 個月）';
+      toggleBtn.addEventListener('click', function () {
+        assetHistoryExpanded = !assetHistoryExpanded;
+        renderAssetHistory();
+      });
+      assetHistoryList.appendChild(toggleBtn);
+    }
+  }
+
+  function renderAssetView() {
+    assetMonthInput.value = selectedAssetMonth;
+    var current = findAssetSnapshot(selectedAssetMonth);
+    var src = current || latestAssetSnapshotBefore(selectedAssetMonth);
+    assetDepositsInput.value = src ? src.deposits : '';
+    assetStocksInput.value = src ? src.stocks : '';
+    assetFundsInput.value = src ? src.funds : '';
+    assetInsuranceInput.value = src ? src.insurance : '';
+    assetUsStockInput.value = src ? src.usStockUsd : '';
+    assetUsdRateInput.value = src ? src.usdRate : '';
+    assetUsdDepositInput.value = src ? src.usdDepositUsd : '';
+    renderAssetSummary();
+    renderAssetHistory();
+  }
+
+  assetMonthInput.addEventListener('change', function () {
+    if (!assetMonthInput.value) return;
+    selectedAssetMonth = assetMonthInput.value;
+    renderAssetView();
+  });
+
+  [assetDepositsInput, assetStocksInput, assetFundsInput, assetInsuranceInput, assetUsStockInput, assetUsdRateInput, assetUsdDepositInput].forEach(function (input) {
+    input.addEventListener('input', renderAssetSummary);
+  });
+
+  assetSaveBtn.addEventListener('click', function () {
+    var vals = currentFormAssetValues();
+    var idx = assetSnapshots.findIndex(function (s) { return s.month === selectedAssetMonth; });
+    var snapshot = {
+      id: idx >= 0 ? assetSnapshots[idx].id : Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
+      month: selectedAssetMonth,
+      deposits: vals.deposits,
+      stocks: vals.stocks,
+      funds: vals.funds,
+      insurance: vals.insurance,
+      usStockUsd: vals.usStockUsd,
+      usdRate: vals.usdRate,
+      usdDepositUsd: vals.usdDepositUsd,
+      updatedAt: new Date().toISOString()
+    };
+    if (idx >= 0) assetSnapshots[idx] = snapshot;
+    else assetSnapshots.push(snapshot);
+    persistAssets();
+    renderAssetView();
   });
 
   // ---------- Report sheet ----------
@@ -1291,7 +1546,7 @@
 
   // ---------- Backup export / import ----------
   function exportBackup() {
-    var data = JSON.stringify(transactions, null, 1);
+    var data = JSON.stringify({ transactions: transactions, assetSnapshots: assetSnapshots }, null, 1);
     var blob = new Blob([data], { type: 'application/json' });
     var url = URL.createObjectURL(blob);
     var a = document.createElement('a');
@@ -1444,6 +1699,21 @@
       });
     }
 
+    if (assetSnapshots.length > 0) {
+      var latestSnapshot = assetSnapshots.slice().sort(function (a, b) { return a.month < b.month ? 1 : -1; })[0];
+      var usStockTwd = (latestSnapshot.usStockUsd || 0) * (latestSnapshot.usdRate || 0);
+      var usdDepositTwd = (latestSnapshot.usdDepositUsd || 0) * (latestSnapshot.usdRate || 0);
+      lines.push('');
+      lines.push('■ 資產總覽（' + latestSnapshot.month.replace('-', '/') + '）');
+      lines.push('存款：' + formatMoney(latestSnapshot.deposits || 0));
+      lines.push('股票：' + formatMoney(latestSnapshot.stocks || 0));
+      lines.push('基金：' + formatMoney(latestSnapshot.funds || 0));
+      lines.push('保險：' + formatMoney(latestSnapshot.insurance || 0));
+      lines.push('美股：US' + formatMoney(latestSnapshot.usStockUsd || 0) + '（約台幣 ' + formatMoney(usStockTwd) + '）');
+      lines.push('外幣美元存款：US' + formatMoney(latestSnapshot.usdDepositUsd || 0) + '（約台幣 ' + formatMoney(usdDepositTwd) + '）');
+      lines.push('總淨值：' + formatMoney(assetSnapshotTotal(latestSnapshot)));
+    }
+
     return lines.join('\n');
   }
 
@@ -1473,18 +1743,33 @@
     if (!file) return;
     var reader = new FileReader();
     reader.onload = function () {
-      var data;
+      var data, newTransactions, newAssetSnapshots;
       try {
         data = JSON.parse(reader.result);
-        if (!Array.isArray(data)) throw new Error('not an array');
+        if (Array.isArray(data)) {
+          newTransactions = data;
+          newAssetSnapshots = null;
+        } else if (data && Array.isArray(data.transactions)) {
+          newTransactions = data.transactions;
+          newAssetSnapshots = Array.isArray(data.assetSnapshots) ? data.assetSnapshots : [];
+        } else {
+          throw new Error('unrecognized format');
+        }
       } catch (err) {
         alert('匯入失敗：檔案格式不正確');
         return;
       }
-      var ok = confirm('匯入將會取代目前 App 裡所有的記帳資料（共 ' + data.length + ' 筆），確定要繼續嗎？');
+      var confirmMsg = '匯入將會取代目前 App 裡所有的記帳資料（共 ' + newTransactions.length + ' 筆）';
+      confirmMsg += newAssetSnapshots ? '與資產快照（共 ' + newAssetSnapshots.length + ' 筆），確定要繼續嗎？' : '，確定要繼續嗎？';
+      var ok = confirm(confirmMsg);
       if (!ok) return;
-      transactions = data;
+      transactions = newTransactions;
       persist();
+      if (newAssetSnapshots) {
+        assetSnapshots = newAssetSnapshots;
+        persistAssets();
+        renderAssetView();
+      }
       renderAll();
       openReport();
       alert('匯入完成！');

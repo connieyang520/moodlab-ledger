@@ -849,3 +849,28 @@ input {
   font-weight: 700;
 }
 .save-btn:active { filter: brightness(0.9); }
+
+/* ---------- Asset view ---------- */
+.asset-month-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.asset-month-row .field-label { margin-bottom: 0; }
+.asset-month-row .field-input { width: auto; }
+
+.asset-usd-hint {
+  margin: -8px 0 16px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.asset-summary-card { margin-left: 0; margin-right: 0; }
+
+.asset-history-section { margin-top: 16px; padding: 0; border: none; }
+
+#assetDeltaValue.positive { color: var(--good); }
+#assetDeltaValue.negative { color: var(--critical); }
